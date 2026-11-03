@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pde-competition"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+  "torch",
+  "numpy",
+  "h5py",          # local preprocessing only; absent from the eval container
+  "setuptools<81", # CNO's vendored StyleGAN ops import pkg_resources
+]
+
+[project.optional-dependencies]
+# Training-time tooling only. Deliberately not a core dependency: the eval
+# container has no network and nothing shipped in a submission may import this.
+train = ["wandb"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
