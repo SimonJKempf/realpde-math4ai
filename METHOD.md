@@ -59,6 +59,57 @@ schedule (10 % warm-up), batch size 16, `rel_l2` = mean per-window relative L2 o
 | 5 width head (seed 1) | out-of-fold residuals of the nine stage-3 models on all 18 real Re rows, stride 20 | smooth SPS reward: −mean sigmoid((h−|r|)/τ)·exp(−(lo+up)/σ), τ annealed from 5e-4 | AdamW (wd 1e-4), one-cycle, peak 2e-3 | 30 epochs | 64 |
 | 6 students (3 models, seeds 1 3 4), each init from the same-seed teacher | train_real, all trajectories, stride 2, phase mix | stage-2 loss against the truth + rel_l2 and 0.09·tke_rel_l2 against the mean of the five teachers (`--distill-weight 1 --distill-truth-weight 1 --distill-tke`) | AdamW, one-cycle, peak 3e-4 | 10 epochs, epoch 10 kept | 16 |
 
+### 4.1 The losses, written out
+
+Three objectives do three different jobs. Only the first trains the point predictor.
+
+**Point predictor (stages 2, 3, 4, and the truth part of 6).** For a batch of predictions p and
+targets y, over the scored elements i (measured channels u and v, and y_i ≠ 0, which excludes the
+airfoil body and the area outside the field of view):
+
+```
+L = rel_l2(p, y) + λ_tke · tke_rel_l2(p, y) + λ_cov · L_cov(p, y)
+
+rel_l2      mean over windows of ‖p − y‖₂ / ‖y‖₂
+tke_rel_l2  mean over windows of ‖k(p) − k(y)‖₂ / ‖k(y)‖₂,   k = turbulent kinetic energy field
+L_cov       (1/N) · Σ_i [ 1 − σ((h_c − |p_i − y_i|) / τ) ],  σ = logistic sigmoid
+
+λ_tke = 0.09,  λ_cov = 0.4,  τ = 0.002,  h_u = 0.0093,  h_v = 0.0063
+```
+
+`L_cov` is the smooth version of the scorer's coverage indicator 1{p_i − h ≤ y_i ≤ p_i + h}. The
+band is centred on the prediction with a fixed half-width per channel; the target enters only
+through the residual. Its gradient with respect to p_i is proportional to
+s(1−s)·sign(p_i − y_i) with s = σ((h − |r|)/τ): an L1-type pull toward the target that is
+strongest for residuals near the band edge and vanishes for elements already well inside or
+hopelessly outside. The half-widths h_c are the constant interval widths fitted for an earlier
+submission, so the predictor is trained to be coverable by the band expected to ship. The code is
+`coverage_surrogate` in `src/pde_competition/model.py`; the TKE term is `tke_rel_l2` there, a
+differentiable port of the organizers' metric.
+
+**Distillation (stage 6).** With t the mean prediction of the five frozen teachers on the same
+augmented input the student sees:
+
+```
+L_student = L(p, y) + rel_l2(p, t) + λ_tke · tke_rel_l2(p, t)
+```
+
+The TKE term against the teacher mean matters because the mean is smoother than any member, and
+matching it in relative L2 alone would pull the student's fluctuation energy down.
+
+**Interval widths (stage 5).** The widths are not part of the predictor's loss. The width head
+outputs a lower and an upper offset (lo_i, up_i) per element and is trained on out-of-fold
+residuals r_i = y_i − p_i to maximise a smooth version of the scorer's interval reward:
+
+```
+R = (1/N) · Σ_i  σ((r_i + lo_i) / τ) · σ((up_i − r_i) / τ) · exp(−(lo_i + up_i) / σ_sps)
+```
+
+with τ annealed from 5e-4 and σ_sps the scorer's width constant from `kit/scoring.py`. The two
+sigmoids are the smooth indicator of p_i − lo_i ≤ y_i ≤ p_i + up_i; the exponential is the scorer's
+own sharpness penalty. The constant fallback widths (§5) maximise the exact, non-smooth reward per
+channel by a one-dimensional search in `scripts/fit_bounds.py`.
+
 - **How runs or checkpoints are selected:** by fixed rules applied inside `train()` on training data
   only. Epochs are fixed (stage 1: lowest in-sample validation rel_l2 epoch, `best.pth`; stages 2–4:
   epoch 36; stage 6: epoch 10). Teachers: eight seeds (1–8) are trained and screened with the

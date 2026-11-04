@@ -34,10 +34,12 @@ help.
 data are screened by a divergence rule; three students, each initialised from its own teacher, are
 trained against the truth and the teacher mean. The three students match the five teachers.
 
-**The loss should contain the metrics.** Adding the TKE metric and an interval-coverage surrogate
-to the relative-L2 loss, predicting the change from the last input frame, and training on the
-three shifted-grid sub-pixel phases of the real data each moved the accuracy subscores by a few
-tenths of a point.
+**The loss should contain the metrics.** Adding the TKE metric and a smooth interval-coverage
+term to the relative-L2 loss, predicting the change from the last input frame, and training on
+the three shifted-grid sub-pixel phases of the real data each moved the accuracy subscores by a
+few tenths of a point. The coverage term trains the point predictor to keep its residuals inside a
+fixed band; the interval widths themselves come from the separately trained width head. Both
+objectives are written out in [METHOD.md §4.1](METHOD.md#41-the-losses-written-out).
 
 Cumulative effect on the development leaderboard, in the order we found them:
 
