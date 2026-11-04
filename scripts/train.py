@@ -19,19 +19,15 @@ with the time it started, so two runs can never overwrite or interleave:
         log.jsonl       one line per epoch
         meta.json       provenance: commit, argv, host, torch, W&B run id
 
-Two selected checkpoints because rel-L2 is not the objective. In 51 of 62 runs
-so far, val TKE bottoms out at a different epoch than val rel-L2, and TKE is
-worth far more per unit than rel-L2 at our operating point. best.pth keeps its
-original meaning so historical comparisons stay valid; best_score.pth is the
-one to submit. log.jsonl records val_score every epoch, so a revised weighting
-can be re-applied to past runs offline.
+Two selected checkpoints because rel-L2 is not the objective: val TKE usually
+bottoms out at a different epoch than val rel-L2, and TKE is worth more per
+unit than rel-L2 at the operating point of this competition. best_score.pth is
+the one to submit. log.jsonl records val_score every epoch, so a revised
+weighting can be re-applied to past runs offline.
 
 Add --wandb to mirror the metrics to Weights & Biases. It is strictly optional:
-the JSONL is written either way and stays the authoritative record. Pass the
-same --wandb-group to every arm of one experiment to compare them as a set.
-
-scripts/summarize_runs.py rolls every run directory up into one table
-(experiments/results/summary.csv); experiments/notes/ carries the running state.
+the JSONL is written either way and stays the authoritative record.
+scripts/summarize_runs.py rolls every run directory up into one CSV table.
 
 Validation loss here is mean relative L2, the quantity behind rel_l2_score --
 but it is NOT the leaderboard number. Run scripts/score_local.py on a built zip

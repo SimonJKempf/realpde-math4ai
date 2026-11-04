@@ -1,13 +1,15 @@
 """Disagreement widths validated OUT OF FOLD on all 18 Reynolds rows.
 
-W44/W44b/W44c fitted h = a + b*z (z = member std) on ONE row and scored it on
-ONE other. This uses the cross-fit fold ensembles (W51a: three recipe seeds per
+Widths of the form h = a + b*z (z = per-element std over ensemble members),
+validated honestly. This uses the cross-fit fold ensembles (three seeds per
 fold, each fold holding out a third of the rows) so every row has a member mean,
 a member disagreement and a target from models that never saw it. Then:
   * leave-one-row-out over the rows in --loo-rows (fit a,b on the other 17,
     score the left-out row) for lin_z and lin_z x shape;
-  * a fit on all 18 rows, reported next to W44's one-row (a, b) so we know
-    whether the shipped one-row fit was representative.
+  * a fit on all 18 rows, reported next to a one-row fit so one can see
+    whether a single-row fit is representative.
+
+train_width_head.py imports ``collect`` and ``fit_ab`` from here.
 
     python scripts/oof_disagreement.py --folds 'outputs/runs/ws_cfk_fold*/best_score.pth' \
         --loo-rows 3750 13950 26700 --stride 40

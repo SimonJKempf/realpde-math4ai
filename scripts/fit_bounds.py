@@ -10,9 +10,7 @@ measured elements -- and an element whose target falls outside its interval
 scores exactly zero. Fitted constant widths are worth far more than they look:
 the same FNO predictions went from sps 20.39 to 46.73 with no retraining.
 
-Widths are model-specific, so this has to be re-run for every checkpoint. The
-FNO ones survive only as a literal in submission/archive/submission_fno_bounds.py
-with the method in a comment; this script exists so ours are reproducible.
+Widths are model-specific, so this has to be re-run for every checkpoint.
 
 What is being maximised
 -----------------------

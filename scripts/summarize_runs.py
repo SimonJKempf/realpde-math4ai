@@ -7,10 +7,9 @@
     python scripts/summarize_runs.py --filter mix     # run ids containing "mix"
 
 Reads only `outputs/runs/*/log.jsonl` and `*/meta.json` -- no torch, no data,
-no network -- and writes `experiments/results/summary.csv`. Because it is
-derived, the CSV can be regenerated at any time and is never hand-edited: the
-run directories are the source of truth, and `submissions.tsv` beside it remains
-the separate record of what was actually submitted to Codabench.
+no network -- and writes `summary.csv` (path from `pde_competition.paths`, or
+`--csv`). Because it is derived, the CSV can be regenerated at any time and is
+never hand-edited: the run directories are the source of truth.
 
 One row per run directory. Best epochs are recomputed from the log rather than
 read from a checkpoint, and `best_val_score` is recomputed from the logged

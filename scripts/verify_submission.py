@@ -7,8 +7,8 @@ wrong shapes and bad bounds before you spend a daily submission.
 
     python scripts/verify_submission.py submission/dist/flower_b16_bounds.zip
 
-Runs the check under a torch matching the eval image (2.2.2), NOT the training
-env's torch. That distinction is not academic: submission 914960 passed this
+Run the check under a torch matching the eval image (2.2.2), NOT the training
+env's torch. That distinction is not academic: one of our submissions passed this
 script on torch 2.13 and then scored 0.0 on every subscore, because
 `@torch.compile` inside flower_standalone drives the inductor backend on 2.2.2
 -- writing a cache dir and shelling out to a C++ compiler, which the eval
@@ -17,15 +17,14 @@ sandbox denies -- while doing nothing at all on 2.13.
 The interpreter is resolved in this order, and the one used is always printed
 so a PASS is never ambiguous:
 
-    --python PATH  ->  $RPDE_EVAL_PYTHON  ->  the `t222` conda env  ->  this one
+    --python PATH  ->  $RPDE_EVAL_PYTHON  ->  this interpreter
 
-Create the env once with ``scripts/make_eval_env.sh``. Without it the check
-still runs, but says plainly that it cannot catch version-specific failures.
-
-Why not just train on 2.2.2 and have one env? Measured: 2.2.2's MPS backend
-raises "Unsupported Border padding mode" for the grid_sample at the heart of
-every SelfWarp layer, so it cannot run Flower on Apple Silicon at all. The
-container is CUDA and unaffected. Two envs is forced, not preferred.
+Point $RPDE_EVAL_PYTHON at an environment with torch 2.2.2 (for example a
+Python 3.10 or 3.11 venv with ``pip install torch==2.2.2 numpy==1.26.4``).
+Without it the check still runs, but says plainly that it cannot catch
+version-specific failures. Note that torch 2.2.2's MPS backend cannot run
+Flower at all ("Unsupported Border padding mode" in grid_sample), so on Apple
+Silicon the eval environment is CPU-only.
 
 WHAT THIS STILL CANNOT CATCH: the container is CUDA on an A800; this is CPU on
 Apple Silicon. Device-specific failures, the 5-minute wall clock under real
@@ -112,12 +111,11 @@ CHILD = textwrap.dedent('''
 
 
 EVAL_TORCH = "2.2.2"
-EVAL_ENV = Path("/opt/miniconda3/envs/t222/bin/python")
 
 
 def resolve_python(explicit: str | None) -> Path:
     """Which interpreter runs the clean-room check. See the module docstring."""
-    for cand in (explicit, os.environ.get("RPDE_EVAL_PYTHON"), EVAL_ENV):
+    for cand in (explicit, os.environ.get("RPDE_EVAL_PYTHON")):
         if cand and Path(cand).exists():
             return Path(cand)
     return Path(sys.executable)
@@ -141,7 +139,7 @@ def main(zip_path: Path, python: str | None = None):
     print(f"python : {py}")
     print(f"torch  : {tv} " + ("(matches eval image)" if matches else
           f"!= eval image {EVAL_TORCH} -- version-specific failures CANNOT be "
-          f"caught; run scripts/make_eval_env.sh"))
+          f"caught; set $RPDE_EVAL_PYTHON to an interpreter with torch {EVAL_TORCH}"))
 
     tmp = Path(tempfile.mkdtemp(prefix="verify_sub_"))
     try:
@@ -179,7 +177,6 @@ if __name__ == "__main__":
     ap.add_argument("zip", type=Path)
     ap.add_argument("--python", default=None, metavar="PATH",
                     help="interpreter to run the clean-room check under; "
-                         "defaults to $RPDE_EVAL_PYTHON, then the t222 env, "
-                         "then this interpreter")
+                         "defaults to $RPDE_EVAL_PYTHON, then this interpreter")
     a = ap.parse_args()
     main(a.zip, a.python)

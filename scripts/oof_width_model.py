@@ -1,19 +1,20 @@
 """SPS width model fitted on OUT-OF-FOLD residuals from every Reynolds row.
 
-The shipped widths are fitted on the two held-out rows (13950, 26700) because
-those are the only cells the shipped model has honest residuals on. W24 showed
-the Re-LEVEL of the width matters more than its spatial structure, and D4 that
-the optimal width tracks the window's mean |u| at r = 0.98 across rows. The
-hidden rows are 15225 (interpolation) and 27975 (extrapolation past every real
-row). A width model fitted on 18 rows can be validated for extrapolation by
-leaving the top row out; one fitted on 2 rows cannot.
+Constant widths fitted on two held-out rows (13950, 26700) are the simplest
+honest choice, because those are the only cells a model trained on the rest has
+out-of-sample residuals on. Two observations motivate more: the Reynolds-LEVEL
+of the width matters more than its spatial structure, and the optimal width
+tracks the window's mean |u| at r = 0.98 across rows. The hidden test rows are
+15225 (interpolation) and 27975 (extrapolation past every real row). A width
+model fitted on 18 rows can be validated for extrapolation by leaving the top
+row out; one fitted on 2 rows cannot.
 
-Inputs: K fold checkpoints (W30), each trained with --holdout-re on disjoint
-row sets covering all 18. Every row is predicted by the fold that never saw it.
+Inputs: K fold checkpoints, each trained with --holdout-re on disjoint row sets
+covering all 18. Every row is predicted by the fold that never saw it.
 
 Width models, per channel c, for window w with mean input speed m_w and pixel p:
-    const        h = h0                       one number (what ships today)
-    affine       h = a + b*m_w                D4's form, now fitted on 18 rows
+    const        h = h0                       one number
+    affine       h = a + b*m_w                fitted on 18 rows
     shape        h = (a + b*m_w) * s[p]       times a Re-free per-pixel shape
     blend        h = (a + b*m_w) * (0.5*s[p] + 0.5)
 Validation is leave-one-row-out over the 18 rows: fit on 17, score the

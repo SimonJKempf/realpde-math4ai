@@ -387,42 +387,6 @@ class WidthHeadUnit(unittest.TestCase):
         self.assertEqual(tuple(F.shape), (40, twh.N_FEAT, 32, 64))
 
 
-class AverageCheckpoints(unittest.TestCase):
-    """average_checkpoints: the mean of two saved models is elementwise the mean, keeps the config, and loads back."""
-
-    def test_average_is_the_mean_and_reloads(self):
-        import importlib.util
-        import torch
-        from pde_competition.model import FlowerConfig, FlowerS2S
-        spec = importlib.util.spec_from_file_location("avg", str(REPO / "scripts" / "average_checkpoints.py"))
-        avg = importlib.util.module_from_spec(spec); spec.loader.exec_module(avg)
-        small = dict(lifting_dim=32, num_heads=8, groups=8)
-        with tempfile.TemporaryDirectory() as d:
-            paths = []
-            models = []
-            for i in range(2):
-                torch.manual_seed(i)
-                m = FlowerS2S(FlowerConfig(**small))
-                m.save(Path(d) / f"m{i}.pth", epoch=10 + i)
-                paths.append(Path(d) / f"m{i}.pth"); models.append(m)
-            out = Path(d) / "avg.pth"
-            payload = avg.average_checkpoints(paths, out)
-            self.assertEqual(payload["averaged_epochs"], [10, 11])
-            got = FlowerS2S.from_checkpoint(out)
-            s0, s1, sg = models[0].state_dict(), models[1].state_dict(), got.state_dict()
-            for k in s0:
-                if s0[k].is_floating_point():
-                    torch.testing.assert_close(sg[k], (s0[k] + s1[k]) / 2)
-                else:
-                    self.assertTrue(torch.equal(sg[k], s0[k]))
-            self.assertEqual(got.cfg.lifting_dim, 32)
-            # a different config must be refused
-            other = FlowerS2S(FlowerConfig(lifting_dim=16, num_heads=8, groups=8))
-            other.save(Path(d) / "other.pth")
-            with self.assertRaises(ValueError):
-                avg.average_checkpoints([paths[0], Path(d) / "other.pth"], Path(d) / "bad.pth")
-
-
 class WidthHeadInSubmission(unittest.TestCase):
     """submission_flower's _WidthHead / _head_features are exact twins of train_width_head's."""
 
@@ -519,54 +483,6 @@ class WidthHeadInSubmission(unittest.TestCase):
         # population std over members, as the fused graph computes it, equals numpy's default
         y = t(rng.normal(0, 1, (3, N, T, H, W, 2)).astype(np.float32))
         torch.testing.assert_close(y.std(0, unbiased=False), t(y.numpy().std(0)), rtol=1e-5, atol=1e-6)
-
-
-class QuantileHead(unittest.TestCase):
-    """sps P3's head: quantiles must not cross, and the width picked must be the one
-    the scorer would pick. Both are load-bearing -- crossing quantiles make F(h)
-    non-monotone and the argmax meaningless."""
-
-    def setUp(self):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(
-            "tqh", str(pathlib.Path(__file__).resolve().parents[1] / "scripts" / "train_quantile_head.py"))
-        self.m = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(self.m)
-
-    def test_quantiles_never_cross(self):
-        import torch
-        torch.manual_seed(0)
-        h = self.m.QuantileHead(8, 5, 7)
-        # perturb away from the zero-init so the test sees a real forward, not the constant
-        with torch.no_grad():
-            h.net[-1].weight.normal_(0, 0.5)
-        out = h(torch.randn(3, 5, 8, 8))
-        self.assertEqual(out.shape, (3, 2, 7, 8, 8))
-        d = out[:, :, 1:] - out[:, :, :-1]
-        self.assertGreaterEqual(float(d.min()), 0.0, "quantiles crossed")
-
-    def test_pick_returns_the_scorer_s_argmax(self):
-        import numpy as np
-        sigma = self.m.SIGMA_GLOBAL
-        taus = np.array([0.5, 0.8, 0.95])
-        h = np.array([[[0.002, 0.010, 0.400]]])          # (1,1,Q)
-        got = self.m.pick(h, taus)
-        want = h[0, 0][int(np.argmax(taus * np.exp(-2.0 * h[0, 0] / sigma)))]
-        self.assertAlmostEqual(float(got[0, 0]), float(want), places=12)
-        # a hopeless third quantile must never be chosen: exp(-2*0.4/sigma) underflows the gain
-        self.assertNotAlmostEqual(float(got[0, 0]), 0.400, places=6)
-
-    def test_pinball_is_minimised_at_the_true_quantile(self):
-        import torch
-        torch.manual_seed(0)
-        target = torch.rand(1, 2, 1, 64) * 0.02            # (B,2,H,W)
-        scored = torch.ones_like(target)
-        taus = torch.tensor([0.5])
-        q = torch.quantile(target.reshape(-1), 0.5)
-        at_truth = self.m.pinball(q.expand(1, 2, 1, 1, 64), target, taus, scored)
-        for off in (-0.004, +0.004):
-            self.assertGreater(float(self.m.pinball((q + off).expand(1, 2, 1, 1, 64), target, taus, scored)),
-                               float(at_truth), f"pinball not minimised at the median (offset {off})")
 
 
 class PerAxisBoundary(unittest.TestCase):

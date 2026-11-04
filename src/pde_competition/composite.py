@@ -13,15 +13,9 @@ leaderboard rows to **5e-7**, which is the rounding precision of the reported
 subscores themselves; refitting P on any five rows predicts the sixth to the
 same 5e-7; P is stable to eight significant figures across those folds; and
 among the 1001 weight vectors that are multiples of 0.1, the runner-up is
-138,000x worse. See experiments/notes/analyses/composite-score.md.
+138,000x worse.
 
-Consumers:
-
-    scripts/train.py            selects best_score.pth epoch by epoch
-    scripts/solve_composite.py  re-verifies against submissions.tsv
-
-``solve_composite.py`` still runs after every submission -- not to refit, but
-as a regression test that new rows keep landing on this formula.
+Consumer: scripts/train.py selects best_score.pth epoch by epoch with it.
 """
 from __future__ import annotations
 

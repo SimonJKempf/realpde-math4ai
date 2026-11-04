@@ -20,8 +20,7 @@ every submission.
 
 Costs a few minutes on the M2 (two inference passes over the held-out windows
 plus the verifier). Local numbers run ~2-4 points optimistic on the accuracy
-subscores and local time_score is meaningless; see
-experiments/notes/analyses/submission-4-flower-vs-fno.md.
+subscores and local time_score is meaningless (the grader's hardware differs).
 
 Choice of fit rows is passed straight through to fit_bounds.py, whose default
 fits on Re 13950 and validates on 26700. Submission 5 (the best composite so

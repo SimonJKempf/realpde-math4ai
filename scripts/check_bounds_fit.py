@@ -2,15 +2,14 @@
 """Gate a built submission on HOW its uncertainty bands were fitted.
 
 Widths are never typed into a source file: `fit_bounds.py` writes `<ckpt>.bounds.json`
-and `build_submission.py` ships it. That leaves one silent failure mode, which cost
-submission 6 about 1.44 sps and reappeared in SUB28/SUB29 on 2026-09-23: `fit_bounds`
-defaults to fitting on Re 13950 ALONE and validating on 26700, while every good
-submission since has passed `--fit-re 13950 26700`. Re 26700 wants ~44% wider bands,
-so a one-row fit ships bands that are too narrow everywhere and loses coverage --
-and it does it without an error, a traceback, or a shape change.
+and `build_submission.py` ships it. That leaves one silent failure mode: `fit_bounds`
+defaults to fitting on Re 13950 ALONE and validating on 26700, while the shipped
+widths were fitted with `--fit-re 13950 26700`. Re 26700 wants ~44% wider bands, so a
+one-row fit ships bands that are too narrow everywhere and loses coverage (about
+1.4 sps points in our experience) -- without an error, a traceback, or a shape change.
 
 Reads the bounds.json actually inside the zip, so it gates the artefact, not the
-intent recorded in a queue file.
+intent.
 """
 import argparse, json, sys, zipfile
 

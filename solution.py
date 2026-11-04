@@ -8,7 +8,7 @@ through the SAME scripts (scripts/train.py, scripts/train_width_head.py, scripts
 scripts/build_submission.py, submission/rezip_fast.py). Nothing is re-implemented here: this
 file only sequences the stages, pins their run ids, and relocates data/outputs into the
 container's mounts. Every command line below is the one recorded in the corresponding run's
-meta.json (experiments/queue/*.sh in the development repository).
+meta.json under dev_logs/.
 
 Stages, in the order train() runs them (all on the released training data only):
 

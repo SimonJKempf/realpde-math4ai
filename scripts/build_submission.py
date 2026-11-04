@@ -204,8 +204,8 @@ def _payload_width_head(head: Path, use_disagreement: bool, scale: float = 1.0) 
         # Refuse here rather than in the grader -- half a head still scores, just wrongly.
         raise SystemExit(
             f"{head.name} has n_out={n_out}; submission.py consumes the symmetric (2) and the "
-            "asymmetric lower/upper (4) layouts only, and n_out=6 (H2) is CLOSED -- see "
-            "experiments/notes/directions.md.")
+            "asymmetric lower/upper (4) layouts only; the n_out=6 layout (a point correction "
+            "plus lower/upper) is not supported by the shipped module.")
     shutil.copy2(head, STAGING / "width_head.pth")
     bp = STAGING / "bounds.json"
     b = json.loads(bp.read_text())

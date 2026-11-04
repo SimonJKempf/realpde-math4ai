@@ -1,13 +1,14 @@
-"""The trained SPS width head (W52).
+"""The trained SPS width head: a learned, per-element interval width.
 
 A small CNN maps per-element features to a per-element HALF-WIDTH h >= 0,
 symmetric about the point prediction (so lower <= pred <= upper holds by
 construction), trained to maximise a smooth surrogate of the scorer's reward
     1{|r| <= h} * exp(-2h/sigma)       ->   sigmoid((h - |r|)/tau) * exp(-2h/sigma)
-on OUT-OF-FOLD residuals (W51a's fold ensembles: every row predicted by three
-recipe models that never saw it). Features per element (channel-stacked over
-time): the member-mean prediction u,v; member disagreement z_u, z_v; the
-window's mean input speed; normalised pixel coordinates; the frame index.
+on OUT-OF-FOLD residuals: cross-fit fold ensembles (three seeds per fold, each
+fold holding out a third of the Reynolds rows), so every row is predicted by
+models that never saw it. Features per element (channel-stacked over time): the
+member-mean prediction u,v; member disagreement z_u, z_v; the window's mean
+input speed; normalised pixel coordinates; the frame index.
 
 Validation is exact (fit_bounds.objective_map) on --val-re rows, which are
 excluded from training, against the constant and the linear-in-disagreement
@@ -18,16 +19,16 @@ head.pth + head.json beside the first fold checkpoint's directory.
     python scripts/train_width_head.py --folds 'outputs/runs/ws_cfk_fold*/best_score.pth' \
         --val-re 13950 26700 --stride 20 --epochs 30
 
---outputs (2026-09-21, directions.md H1/H2) relaxes the SYMMETRY that every head
-so far has assumed. Nothing in kit/scoring.py::aggregate_sps requires it: the
-reward is 1{lower <= target <= upper} * exp(-(upper-lower)/sigma), which pays for
-the WIDTH and for covering the target, not for the interval being centred.
+--outputs relaxes the SYMMETRY of the interval. Nothing in
+kit/scoring.py::aggregate_sps requires it: the reward is
+1{lower <= target <= upper} * exp(-(upper-lower)/sigma), which pays for the
+WIDTH and for covering the target, not for the interval being centred.
 
-    --outputs 1   (default)  h            -> lower = p - h,  upper = p + h
-    --outputs 2   H1         (lo, up)     -> lower = p - lo, upper = p + up
-    --outputs 3   H2         (d, lo, up)  -> lower = p+d-lo, upper = p+d+up
+    --outputs 1              h            -> lower = p - h,  upper = p + h
+    --outputs 2   (shipped)  (lo, up)     -> lower = p - lo, upper = p + up
+    --outputs 3              (d, lo, up)  -> lower = p+d-lo, upper = p+d+up
 
---outputs 1 is bit-identical to everything shipped. --outputs 3 also moves the
+--outputs 3 also moves the
 POINT PREDICTION, which feeds rel_l2, tke and mvpe (0.7 of the composite), so it
 reports the accuracy of the corrected field next to the width reward and --delta-l2
 lets the correction be trained against the residual as well as against the scorer.
