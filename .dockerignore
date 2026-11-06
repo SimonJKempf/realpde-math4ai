@@ -1,0 +1,12 @@
+.git
+__pycache__
+*.pyc
+.DS_Store
+*.egg-info
+.venv
+venv
+data
+outputs
+checkpoints
+submission/dist
+submission/staging*
