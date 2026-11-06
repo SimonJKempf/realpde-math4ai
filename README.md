@@ -1,7 +1,7 @@
 # Calibrated Intervals and Distilled Ensembles: A Flower Neural Operator for Airfoil Wakes
 
 Team **Math4AI** (Simon Kempf, LMU Munich), NeurIPS 2026 RealPDE Competition, Track 1 (Sim2Real).
-Final leaderboard: rank 12, `final_score` 81.81.
+Final leaderboard: rank 11, `final_score` 81.81.
 
 Track 1 gives 20 frames of particle-image-velocimetry (PIV) velocity behind an airfoil on a
 32x64 grid and asks for the next 20 frames plus a per-element uncertainty interval. Five subscores
