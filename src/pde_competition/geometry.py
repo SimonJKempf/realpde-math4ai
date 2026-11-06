@@ -6,7 +6,7 @@ and a submission zip (flat, no package, no data layer) can carry this file
 beside the model without dragging anything else in. Adding an import here
 breaks that; don't.
 
-Values are the scored geometry, taken from kit/load_baseline.py: the raw PIV is
+Values are the scored geometry, taken from the organizers' starting kit: the raw PIV is
 64x128 and Track 1 subsamples it by 2 (strided, NOT averaged), so scoring runs
 at 32x64. The subsampling factor itself lives in scripts/subsample_data.py --
 it describes how data/processed was produced, not what the model sees.

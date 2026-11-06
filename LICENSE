@@ -28,6 +28,9 @@ covered by the notice above:
 - src/pde_competition/_vendor/flower_standalone.py: Flower (Muser et al. 2026),
   MIT (c) 2026 Till Muser / SADA Laboratory, with BSD-3-Clause parts
   (c) 2024 Polymathic AI. Full text in src/pde_competition/_vendor/LICENSE.flower.
-- kit/: the RealPDE Track 1 starting kit v9 provided by the competition
-  organizers, including the vendored einops (MIT, kit/_vendor/einops/LICENSE)
-  and the RealPDEBench baseline models under kit/rpde_baselines.
+- kit/scoring.py and kit/README.md: from the RealPDE Track 1 starting kit v9
+  provided by the competition organizers to participants; reproduced here so
+  the local scoring matches the official one. The organizers' baseline models
+  that the kit also shipped are not included in this repository.
+- kit/_vendor/einops: einops, MIT (kit/_vendor/einops/LICENSE), as vendored in
+  the organizers' starting kit.

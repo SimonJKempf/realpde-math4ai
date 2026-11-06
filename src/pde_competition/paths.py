@@ -33,10 +33,10 @@ CKPT_FLAT   = CHECKPOINTS / "all"          # flat symlinks the kit expects
 OUTPUTS     = _env_path("RPDE_OUTPUTS", REPO / "outputs")   # gitignored: runs/, scores/
 KIT         = REPO / "kit"
 
-# The committed experiment record. Small text only -- see experiments/README.md.
+# Where summarize_runs.py writes its CSV (created on demand).
 EXPERIMENTS = REPO / "experiments"
-QUEUE       = EXPERIMENTS / "queue"        # one dated .sh per experiment batch
-RESULTS     = EXPERIMENTS / "results"      # summary.csv (runs), submissions.tsv
+QUEUE       = EXPERIMENTS / "queue"
+RESULTS     = EXPERIMENTS / "results"      # summary.csv
 
 EXAMPLE_H5  = EXAMPLE / "3750_0.h5"
 TRAIN_REAL  = RAW / "train_real"

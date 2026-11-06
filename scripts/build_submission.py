@@ -3,10 +3,9 @@
 
 Usage:
     python scripts/build_submission.py --ckpt outputs/runs/<run>/best_score.pth --name flower_v7
-    python scripts/build_submission.py --model baseline           # organizers' FNO control
 
-For --model flower (the default) the archive ROOT contains, side by side:
-    submission.py, model.pth, bounds.json, flower_standalone.py, geometry.py, _vendor/
+The archive ROOT contains, side by side:
+    submission.py, model.pth, bounds.json, flower_standalone.py, LICENSE.flower, geometry.py, _vendor/
 --ensemble adds model_1.pth.. and ensemble.json; --width-head adds width_head.pth; --centre
 (CEN) adds centre_0.pth.. , an ensemble.json "centre" list and bounds.json "centre_bounds":
 true, which centres the shipped INTERVAL on that second ensemble while the prediction stays
@@ -16,9 +15,6 @@ bounds.json is REQUIRED and is looked for beside the checkpoint as
 <ckpt stem>.bounds.json -- run scripts/fit_bounds.py --ckpt <ckpt> first.
 The widths ship as data, not as a literal in submission.py, so which widths a
 zip carries is a recorded artifact of the checkpoint they were fitted to.
-
-For --model baseline the root holds the kit's plumbing instead:
-    submission.py, <checkpoint>.pth, load_baseline.py, rpde_baselines/, _vendor/
 """
 import argparse
 import json
@@ -26,7 +22,7 @@ import shutil
 import zipfile
 from pathlib import Path
 
-from pde_competition.paths import REPO, KIT, CHECKPOINTS
+from pde_competition.paths import REPO, KIT
 
 
 def _stage_weights(src: Path, dst: Path) -> None:
@@ -61,14 +57,6 @@ CAP_MB = 256
 
 
 IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store")
-
-
-def _payload_baseline(ckpt: Path) -> None:
-    """The organizers' FNO/CNO/Transolver plumbing."""
-    shutil.copy2(ckpt, STAGING / ckpt.name)   # submission.py names it directly
-    shutil.copy2(KIT / "load_baseline.py", STAGING / "load_baseline.py")
-    for d in ("rpde_baselines", "_vendor"):
-        shutil.copytree(KIT / d, STAGING / d, ignore=IGNORE)
 
 
 def bounds_path_for(ckpt: Path) -> Path:
@@ -176,6 +164,7 @@ def _payload_flower(ckpt: Path, bounds: Path) -> None:
     shutil.copy2(bounds, STAGING / "bounds.json")
     shutil.copy2(SRC / "_vendor" / "flower_standalone.py",
                  STAGING / "flower_standalone.py")
+    shutil.copy2(SRC / "_vendor" / "LICENSE.flower", STAGING / "LICENSE.flower")  # MIT: ship with copies
     shutil.copy2(SRC / "geometry.py", STAGING / "geometry.py")
     shutil.copytree(KIT / "_vendor", STAGING / "_vendor", ignore=IGNORE)
 
@@ -255,8 +244,8 @@ def build(submission_py: Path, ckpt: Path, name: str, model: str,
                     f"fit_bounds.py, or pass --bounds explicitly to override.")
         print(f"bounds: half-width {b['half_width']}  fit_re {b.get('fit_re')}  "
               f"from {bounds.relative_to(REPO) if bounds.is_relative_to(REPO) else bounds}")
-    elif model != "baseline":
-        raise SystemExit(f"unknown --model {model!r}; choose baseline or flower")
+    else:
+        raise SystemExit(f"unknown --model {model!r}; only flower is supported")
 
     global STAGING
     import tempfile
@@ -285,8 +274,6 @@ def build(submission_py: Path, ckpt: Path, name: str, model: str,
             # that disagrees on predict_delta, window_norm, ... is read under the wrong meaning.
             _assert_members_agree(ckpt, centre)
             _payload_centre(centre)
-    else:
-        _payload_baseline(ckpt)
 
     out = DIST / f"{name}.zip"
     try:
@@ -308,15 +295,12 @@ def build(submission_py: Path, ckpt: Path, name: str, model: str,
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    # flower is the default: every submission since #4 has been ours. The
-    # baseline payload stays reachable for control submissions.
-    ap.add_argument("--model", choices=("flower", "baseline"), default="flower",
+    ap.add_argument("--model", choices=("flower",), default="flower",
                     help="which set of files to ship beside submission.py")
     ap.add_argument("--submission", type=Path, default=None,
-                    help="entry point; defaults to the one matching --model")
+                    help="entry point; defaults to submission/submission_flower.py")
     ap.add_argument("--ckpt", type=Path, default=None,
-                    help="checkpoint; required for flower, defaults to the FNO "
-                         "baseline for --model baseline")
+                    help="checkpoint (required)")
     ap.add_argument("--bounds", type=Path, default=None,
                     help="bounds.json from fit_bounds.py; defaults to "
                          "<ckpt stem>.bounds.json beside the checkpoint")
@@ -364,10 +348,6 @@ if __name__ == "__main__":
             raise SystemExit("--ckpt is required "
                              "(e.g. outputs/runs/<run>/best_score.pth)")
         name = a.name or "flower"
-    else:
-        submission = a.submission or KIT / "submission_example_fno.py"
-        a.ckpt = a.ckpt or CHECKPOINTS / "sim_real_ft" / "sim_real_fno_fp16.pth"
-        name = a.name or "baseline_fno"
 
     build(submission, a.ckpt, name, a.model, a.bounds, members=a.ensemble, width_scale=a.width_scale,
           width_head=a.width_head, width_head_use_z=a.width_head_use_z, centre=a.centre)

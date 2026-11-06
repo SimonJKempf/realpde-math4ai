@@ -30,9 +30,10 @@ the output window. No autoregressive rollout, no error accumulation, one kernel 
 and 0.6 M parameters per member. Autoregressive variants, temporal lifting and wider models did not
 help.
 
-**Distillation keeps the ensemble gain at a third of the cost.** Five teachers trained on all real
+**Distillation keeps the ensemble gain with fewer members.** Five teachers trained on all real
 data are screened by a divergence rule; three students, each initialised from its own teacher, are
-trained against the truth and the teacher mean. The three students match the five teachers.
+trained against the truth and the teacher mean. The three students match the five teachers on the
+leaderboard at three fifths of the member evaluations per call.
 
 **The loss should contain the metrics.** Adding the TKE metric and a smooth interval-coverage
 term to the relative-L2 loss, predicting the change from the last input frame, and training on
@@ -60,7 +61,10 @@ did not help.
 ## Using the shipped predictor
 
 The zip under `weights/` is byte-identical to the final Codabench upload. It is self-contained
-and needs only `torch` and `numpy`:
+and needs only `torch` and `numpy`. (Because it is the scored artefact, it was left as uploaded:
+it carries the einops licence but not the Flower licence, which is in this repository under
+`src/pde_competition/_vendor/LICENSE.flower`; zips built with the current `build_submission.py`
+include it.)
 
 ```bash
 python scripts/predict_zip.py weights/sub38_denseall_k3_cfk3_vinf102_anch010_fp16_gcf_timed.zip x.npy out.npz
@@ -73,17 +77,21 @@ forward, the width head and the CUDA-graph fast path.
 
 ## Retraining from the raw data
 
+The reference environment is the Dockerfile, which is the competition grader's image plus h5py:
+
 ```bash
-pip install -e .          # torch 2.2.2, numpy 1.26, h5py; Python 3.10 or 3.11
-python -c "import solution; solution.train('/path/to/raw', 'output', 'cuda')"
+docker build -t realpde-math4ai .
+docker run --gpus all -v /path/to/raw:/data -v /path/to/output:/output realpde-math4ai \
+    python -c "import solution; solution.train('/data', '/output', 'cuda')"
 ```
 
-`/path/to/raw` is the organizers' data release with its `train_real/` and `train_sim/` folders.
-`train()` subsamples it to the 32x64 grid, runs every training stage (sim pretraining, 8 teachers,
-9 cross-fit folds, a held-out model, the width head, 3 students), fits the bounds and writes the
-submission zip to `output/`. About 1.8 h on one RTX 4090, under 2 GB of GPU memory.
-[REPRODUCE.md](REPRODUCE.md) has the Docker route, the environment, and the numbers a
-reproduction should land on.
+`/path/to/raw` is the organizers' data release with its `train_real/` and `train_sim/` folders
+of HDF5 files, each with top-level datasets `u`, `v` (and `p` for simulation) of shape
+`(T, 64, 128)` plus the scalars `re` and `aoa`. `train()` subsamples it to the 32x64 grid, runs
+every training stage (sim pretraining, 8 teachers, 9 cross-fit folds, a held-out model, the width
+head, 3 students), fits the bounds and writes the submission zip to the output directory. About
+1.8 h on one RTX 4090, under 2 GB of GPU memory. [REPRODUCE.md](REPRODUCE.md) has the native
+route, the environment, and the numbers a reproduction should land on.
 
 ## Using the pieces separately
 
@@ -98,6 +106,11 @@ reproduction should land on.
   coverage loss terms, and the ensemble distillation loss used by `scripts/train.py`.
 - **Local scoring.** `scripts/score_local.py` computes the five official subscores for a
   submission zip on held-out trajectories, using the organizers' scoring code in `kit/`.
+- **Caveats for reuse as a library.** The submission module is written for a disposable grader
+  process: on import it replaces `torch.compile` with an identity function, freezes the garbage
+  collector, and selects CUDA whenever available regardless of the device argument. `solution.py`
+  builds intermediate zips under the checkout's `submission/dist/` before copying the result to the
+  output directory.
 - **Post-hoc corrections.** `scripts/variance_inflation.py` is the reference implementation of
   the fluctuation rescaling and the mean anchor applied to the shipped prediction.
 
@@ -109,9 +122,9 @@ src/pde_competition/   dataset, model wrapper, composite score estimate
 scripts/               the training pipeline and local scoring (see above)
 submission/            submission_flower.py, the predict() entry point that gets zipped
 solution.py            train() and load_predictor(): the one-command reproduction
-kit/                   the organizers' Track 1 starting kit v9 (scoring code, baselines)
-tests/                 unit tests, CPU, no data needed: python -m unittest discover tests
-weights/               the final submission zip (three fp16 students, width head, bounds)
+kit/                   the organizers' scoring code and vendored einops, from their starting kit
+tests/                 unit tests, CPU, no data needed: python -m unittest discover -s tests -t .
+weights/               the final submission zip (three students, width head in fp16, bounds)
 dev_logs/              per-epoch logs and metadata of the 19 training runs behind the submission
 ```
 
@@ -120,5 +133,6 @@ dev_logs/              per-epoch logs and metadata of the 19 training runs behin
 Our code is MIT licensed (see [LICENSE](LICENSE)). The Flower model is by Till Muser, Elias
 Spitzer, Matti Lassas, Maarten V. de Hoop and Ivan Dokmanić, *Flowers: A Warp Drive for Neural PDE
 Solvers*, arXiv:2603.04430, MIT licensed and vendored with two marked patches listed in
-[src/pde_competition/_vendor/README.md](src/pde_competition/_vendor/README.md). `kit/` is the
-organizers' starting kit and remains theirs.
+[src/pde_competition/_vendor/README.md](src/pde_competition/_vendor/README.md). `kit/` holds the
+organizers' scoring code and their vendored einops copy, which remain theirs; their baseline
+models are not redistributed here.

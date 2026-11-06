@@ -7,10 +7,10 @@
     python scripts/variance_inflation.py <zip> --scales 1.0 --rollout-ramp 10 1.0 5 0.5        # S W19 pairs, lead ramp
     python scripts/variance_inflation.py <zip> --scales 1.0 --rollout-ramp 10 1.0 --rollout-zip <zip_b>   # 2nd pass from zip_b
 
-BLUR (2026-09-23) measured the shipped prediction carrying only **65% of the true unsteady energy**,
+Our diagnostics measured the shipped prediction carrying only **65% of the true unsteady energy**,
 falling to 46% at the longest lead. That is the conditional-mean blur an L2 objective produces, and it is
 the mechanism behind tke_score sitting at 78 while rel_l2 sits at 95.
-The expensive fix is an adversarial or likelihood head (A7). This is the cheap probe of the same target:
+The expensive fix is a generative or likelihood-trained model. This is the cheap probe of the same target:
 take the prediction as it is and scale its fluctuation about its own per-pixel time mean by a constant,
 
     p' = mean_t(p) + alpha * (p - mean_t(p))

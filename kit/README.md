@@ -1,5 +1,11 @@
 # RealPDE Track 1 (Sim2Real) Starting Kit v9
 
+> **Note from team Math4AI.** This is the organizers' README, kept for reference. Of the kit, this
+> repository keeps only `scoring.py` (the official five subscores, used by `scripts/score_local.py`)
+> and `_vendor/einops` (MIT). The baseline models, `load_baseline.py` and the example submissions
+> described below are the organizers' and are not redistributed here; participants received them
+> with the competition materials.
+
 Everything you need to load the official CNO / FNO / Transolver baselines, run
 them, shrink an FNO checkpoint under the 256 MB submission cap, and package a
 Track 1 submission. The model code is vendored, so the kit imports and runs

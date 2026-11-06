@@ -25,22 +25,32 @@ docker run --gpus all -v /path/to/raw:/data -v /path/to/output:/output realpde-m
     python -c "import solution; solution.train('/data', '/output', 'cuda')"
 ```
 
-Without Docker, in an environment with torch 2.2.2, numpy 1.26 and h5py 3.11 (Python 3.10 or 3.11):
+Without Docker, build the same environment by hand. The project file deliberately leaves the
+versions open so the code can be imported under newer torch; the reproduction is defined by these
+pins:
 
 ```bash
+python3.11 -m venv venv && . venv/bin/activate
+pip install torch==2.2.2 numpy==1.26.4 h5py==3.11.0
 pip install -e .
 TORCHDYNAMO_DISABLE=1 python -c "import solution; solution.train('/path/to/raw', 'output', 'cuda')"
 ```
 
 `/path/to/raw` must contain the release's `train_real/` and `train_sim/` folders of HDF5 files.
+`scripts/subsample_data.py` expects each file to hold top-level datasets `u`, `v` (and `p` for
+simulation) of shape `(T, 64, 128)` and the scalars `re` and `aoa`; this is the layout of the
+release we trained on. The organizers' kit README mentions an older tarball layout with the fields
+under `measured_data/`; such files would need to be flattened first. The release is obtained from
+the organizers and is not part of this repository.
 
 `train()` runs every stage of METHOD.md §4 through the same scripts we used during the competition
 (`scripts/train.py`, `scripts/train_width_head.py`, `scripts/fit_bounds.py`,
 `scripts/build_submission.py`, `submission/rezip_fast.py`); `solution.py` only sequences them. It
 writes:
 
-- `output/submission/`: the unzipped submission (`submission.py`, three member checkpoints,
-  `width_head.pth`, `bounds.json`, `ensemble.json`, the vendored model code), and the zip itself;
+- the submission zip, copied to the top of the output directory, and `output/submission/`, the
+  same zip unpacked (`submission.py`, three member checkpoints, `width_head.pth`, `bounds.json`,
+  `ensemble.json`, the vendored model code);
 - `output/MANIFEST.json`: sha256 of every delivered file, library versions, wall-clock hours, and
   the seed-screening values;
 - `output/logs/<stage>.log`, one per training run, and `output/work/` with the 32x64 data stores
@@ -51,6 +61,11 @@ writes:
 
 A stage whose checkpoint already exists is skipped, so an interrupted run can be restarted with the
 same command.
+
+Known limitations of the wrapper: intermediate zips are built under the checkout's
+`submission/dist/` before the result is copied to the output directory, so two concurrent runs from
+one checkout would interfere; and the produced `submission.py` selects CUDA whenever it is
+available, whatever device string is passed to `load_predictor`.
 
 Environment variables:
 
@@ -125,6 +140,7 @@ with every real-data model about 0.001 worse in-sample, which is why the default
 
 ## Tests
 
-`python -m unittest discover tests` runs the unit tests on CPU in about a minute. No data is
-needed. Two temporal-lift tolerance tests are known to fail on Apple MPS and on recent torch
+`python -m unittest discover -s tests -t .` runs the unit tests on CPU in about a minute. No data
+is needed. The `-t .` matters: it imports the tests as a package, whose initialiser disables
+`torch.compile` before torch is imported; without it, set `TORCHDYNAMO_DISABLE=1` yourself. Two temporal-lift tolerance tests are known to fail on Apple MPS and on recent torch
 versions by a few 1e-6; the temporal lift is not used by the shipped models.

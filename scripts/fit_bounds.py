@@ -22,10 +22,12 @@ From kit/scoring.py's aggregate_sps, an element contributes
 and elements with ``target == 0`` are not scored at all -- those are outside the
 PIV field of view or inside the airfoil body.
 
-``pm`` is a per-window accuracy factor that does not depend on the width, so it
-drops out of the fit. Each element belongs to exactly one channel, so the
-objective separates and each channel's half-width ``h`` is an independent 1-D
-maximisation of
+``pm`` is a per-window accuracy factor that does not depend on the width. This
+script drops it, which makes the fit an UNWEIGHTED approximation of the scorer:
+a shared width is optimal for the exact objective only when the windows are
+weighted by (1 - pm), and here every window counts the same. Each element
+belongs to exactly one channel, so the objective separates and each channel's
+half-width ``h`` is an independent 1-D maximisation of
 
     mean over scored elements of  1{|target - pred| <= h} * exp(-2h/sigma)
 

@@ -6,11 +6,15 @@ build-backend = "setuptools.build_meta"
 name = "pde-competition"
 version = "0.1.0"
 requires-python = ">=3.10"
+# Versions are left open so the package imports under current torch. The
+# reproduction environment is the Dockerfile (torch 2.2.2+cu121, numpy 1.26.4,
+# h5py 3.11.0); see REPRODUCE.md for the equivalent native pins. einops is not
+# listed: the vendored copy under kit/_vendor is put on sys.path by
+# pde_competition._vendor, the same copy the submission zip ships.
 dependencies = [
   "torch",
   "numpy",
   "h5py",          # local preprocessing only; absent from the eval container
-  "setuptools<81", # CNO's vendored StyleGAN ops import pkg_resources
 ]
 
 [project.optional-dependencies]

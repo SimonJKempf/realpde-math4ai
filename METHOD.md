@@ -64,8 +64,7 @@ schedule (10 % warm-up), batch size 16, `rel_l2` = mean per-window relative L2 o
 Three objectives do three different jobs. Only the first trains the point predictor.
 
 **Point predictor (stages 2, 3, 4, and the truth part of 6).** For a batch of predictions p and
-targets y, over the scored elements i (measured channels u and v, and y_i ≠ 0, which excludes the
-airfoil body and the area outside the field of view):
+targets y on the measured channels u and v:
 
 ```
 L = rel_l2(p, y) + λ_tke · tke_rel_l2(p, y) + λ_cov · L_cov(p, y)
@@ -76,6 +75,11 @@ L_cov       (1/N) · Σ_i [ 1 − σ((h_c − |p_i − y_i|) / τ) ],  σ = logi
 
 λ_tke = 0.09,  λ_cov = 0.4,  τ = 0.002,  h_u = 0.0093,  h_v = 0.0063
 ```
+
+The two relative-L2 terms run over every element of the selected channels, including the elements
+inside the airfoil body and outside the field of view where the target is exactly zero, so a
+non-zero prediction there is penalised. That matches the organizers' metrics. Only `L_cov` is
+restricted to the N scored elements with y_i ≠ 0, as the interval score is.
 
 `L_cov` is the smooth version of the scorer's coverage indicator 1{p_i − h ≤ y_i ≤ p_i + h}. The
 band is centred on the prediction with a fixed half-width per channel; the target enters only
@@ -107,8 +111,12 @@ R = (1/N) · Σ_i  σ((r_i + lo_i) / τ) · σ((up_i − r_i) / τ) · exp(−(l
 
 with τ annealed from 5e-4 and σ_sps the scorer's width constant from `kit/scoring.py`. The two
 sigmoids are the smooth indicator of p_i − lo_i ≤ y_i ≤ p_i + up_i; the exponential is the scorer's
-own sharpness penalty. The constant fallback widths (§5) maximise the exact, non-smooth reward per
+own sharpness penalty. The constant fallback widths (§5) maximise the non-smooth reward per
 channel by a one-dimensional search in `scripts/fit_bounds.py`.
+
+Both width objectives are unweighted approximations of the scorer: the scorer multiplies each
+window's interval reward by a per-window accuracy factor, and neither the head's training nor the
+constant fit applies that weighting (the head supports it, the shipped run did not use it).
 
 - **How runs or checkpoints are selected:** by fixed rules applied inside `train()` on training data
   only. Epochs are fixed (stage 1: lowest in-sample validation rel_l2 epoch, `best.pth`; stages 2–4:
@@ -195,7 +203,8 @@ with the stages run one at a time (`RPDE_FINAL_PACK=1`, the default), peak GPU m
 ## 10. References
 - T. Muser, E. Spitzer, M. Lassas, M. V. de Hoop, I. Dokmanić, *Flowers: A Warp Drive for Neural PDE
   Solvers*, arXiv:2603.04430 (2026). Code: https://github.com/t-muser/flowers (MIT; `flower_standalone.py`
-  vendored unchanged, licence in `src/pde_competition/_vendor/LICENSE.flower`).
+  vendored with the two marked patches listed in `src/pde_competition/_vendor/README.md`, licence in
+  `src/pde_competition/_vendor/LICENSE.flower`).
 - einops (MIT), vendored copy from the organizers' starting kit under `kit/_vendor/einops`.
 - `kit/scoring.py` from the organizers' Track 1 starting kit v9 (used only to read the SPS width constant
   σ and for local scoring).

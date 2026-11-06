@@ -58,7 +58,7 @@ ARCH = ["--lifting-dim", "128", "--n-levels", "2", "--channels", "3", "--boundar
 REAL = ARCH + ["--delta", "--mix-phases", "0.75", "--tke-weight", "0.09", "--coverage-weight", "0.4",
                "--stride", "5", "--lr", "3e-3"]
 # Teachers: the development run trained EIGHT all-data seeds and screened them with the project's
-# divergence rule (directions.md EXR: a member is OUT when its epoch-36 in-sample val rel_l2 exceeds
+# divergence rule (a member is OUT when its epoch-36 in-sample val rel_l2 exceeds
 # the median by more than 0.00075 AND by more than 3 x MAD). Seeds 2, 7, 8 were out; 1 3 4 5 6 were
 # the five clean members that shipped. The rule is applied here, inside train(), on the same
 # quantity, so a fresh draw is screened the way the shipped one was. The students are the three
