@@ -2248,7 +2248,9 @@ class RolloutFramesMembers(unittest.TestCase):
         self.assertEqual(ast.unparse(guard.test), "cfg.get('rollout_frames')")
         self.assertEqual([ast.unparse(s) for s in guard.body], ["return self._rollout(x)"])
         self.assertEqual(guard.orelse, [])
-        self.assertEqual(ast.unparse(fwd.body[2]), "b, _, h, w, _ = x.shape")
+        # Python 3.10's ast.unparse parenthesises the tuple target; 3.11+ does not.
+        self.assertIn(ast.unparse(fwd.body[2]),
+                      ("b, _, h, w, _ = x.shape", "(b, _, h, w, _) = x.shape"))
         # the guard is the only mention of the rollout in forward
         self.assertEqual(sum("rollout" in ast.unparse(s) for s in fwd.body), 1)
 
